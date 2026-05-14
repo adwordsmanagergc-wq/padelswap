@@ -26,7 +26,6 @@
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return defaultState();
       var parsed = JSON.parse(raw);
-      // Make sure newer seed matches still appear for returning visitors.
       if (!parsed.arena) parsed.arena = defaultState().arena;
       return parsed;
     } catch (e) {
@@ -56,8 +55,19 @@
   }
 
   function sellBackValue(price) {
-    var fee = price * (DATA.sellBackFeePct / 100);
-    return price - fee;
+    return price - price * (DATA.sellBackFeePct / 100);
+  }
+
+  function playersLabel(tm) {
+    return tm.players.map(function (p) { return p.name; }).join(" & ");
+  }
+
+  function tierClass(tier) {
+    return "tier-" + tier.toLowerCase().replace(/\s+/g, "-");
+  }
+
+  function tierBadge(tier) {
+    return '<span class="tier-badge ' + tierClass(tier) + '">' + tier + '</span>';
   }
 
   // ---------- Formatting ----------
@@ -94,6 +104,16 @@
     document.getElementById("walletBalance").textContent = money(state.balance);
   }
 
+  // ---------- Tier helpers ----------
+  function teamsByTier(t) {
+    return DATA.tiers.map(function (tier) {
+      return {
+        tier: tier,
+        teams: t.teams.filter(function (tm) { return tm.tier === tier.id; })
+      };
+    }).filter(function (g) { return g.teams.length > 0; });
+  }
+
   // ---------- Render: featured tournament ----------
   function renderFeatured() {
     var t = tournamentById(DATA.featuredTournamentId);
@@ -101,13 +121,20 @@
     if (!t) { host.innerHTML = ""; return; }
 
     var floorPrice = Math.min.apply(null, t.teams.map(function (x) { return x.price; }));
+    var groups = teamsByTier(t);
+
+    var tierChips = groups.map(function (g) {
+      return '<span class="tier-chip">' + tierBadge(g.tier.id) +
+        '<strong>' + g.teams.length + '</strong> teams</span>';
+    }).join("");
 
     host.innerHTML =
-      '<div class="featured-banner">' +
+      '<div class="featured-banner clickable" data-action="open-tournament" data-tournament="' + t.id + '">' +
         '<div>' +
           '<span class="featured-tag">Next up</span>' +
           '<h3>' + t.name + '</h3>' +
           '<p class="featured-meta">' + t.location + " &middot; Starts " + formatDate(t.startDate) + '</p>' +
+          '<p class="featured-meta">' + t.format + '</p>' +
         '</div>' +
         '<div class="featured-stats">' +
           '<div><div class="stat-val">' + compactMoney(t.prizePool) + '</div><div class="stat-label">Prize pool</div></div>' +
@@ -116,10 +143,12 @@
         '</div>' +
       '</div>' +
       '<div class="featured-cards">' +
-        '<h4>Team cards available</h4>' +
-        '<div class="fc-grid">' +
-          t.teams.map(function (tm) { return teamCardHtml(t.id, tm); }).join("") +
-        '</div>' +
+        '<h4>Tiers in this tournament</h4>' +
+        '<div class="tier-summary">' + tierChips + '</div>' +
+        '<button class="btn btn-primary" style="margin-top:18px" ' +
+          'data-action="open-tournament" data-tournament="' + t.id + '">' +
+          'View all ' + t.teams.length + ' team cards &rarr;' +
+        '</button>' +
       '</div>';
   }
 
@@ -141,35 +170,13 @@
           '<div class="event-cards">' +
             t.teams.map(function (tm) { return teamRowHtml(t.id, tm); }).join("") +
           '</div>' +
+          '<button class="link-btn" style="margin-top:14px" ' +
+            'data-action="open-tournament" data-tournament="' + t.id + '">' +
+            'View full tournament &rarr;' +
+          '</button>' +
         '</div>'
       );
     }).join("");
-  }
-
-  // ---------- Render: a buyable team card (grid tile) ----------
-  function teamCardHtml(tournamentId, tm) {
-    var owned = ownsTeam(tournamentId, tm.id);
-    return (
-      '<div class="team-card">' +
-        '<div class="tc-head">' +
-          '<div>' +
-            '<div class="tc-team">' + tm.team + '</div>' +
-            '<div class="tc-players">' + tm.players + '</div>' +
-          '</div>' +
-          '<span class="tc-seed">' + tm.seed + '</span>' +
-        '</div>' +
-        '<div class="tc-row">' +
-          '<span class="tc-price">' + money(tm.price) + ' <small>card</small></span>' +
-          (owned ? '<span class="tc-owned">In your locker</span>' : '') +
-        '</div>' +
-        '<div class="tc-foot">' +
-          '<button class="btn btn-primary btn-sm" data-action="buy" ' +
-            'data-tournament="' + tournamentId + '" data-team="' + tm.id + '">' +
-            (owned ? 'Buy another' : 'Buy card') +
-          '</button>' +
-        '</div>' +
-      '</div>'
-    );
   }
 
   // ---------- Render: a compact team row (event list) ----------
@@ -178,8 +185,8 @@
     return (
       '<div class="card-row">' +
         '<div>' +
-          '<div class="cr-team">' + tm.team + '</div>' +
-          '<div class="cr-players">' + tm.seed + " &middot; " + tm.players + '</div>' +
+          '<div class="cr-team">' + tm.team + " " + tierBadge(tm.tier) + '</div>' +
+          '<div class="cr-players">' + playersLabel(tm) + '</div>' +
         '</div>' +
         '<div class="cr-right">' +
           '<span class="cr-price">' + money(tm.price) + '</span>' +
@@ -190,6 +197,97 @@
         '</div>' +
       '</div>'
     );
+  }
+
+  // ---------- Render: detailed buyable team card ----------
+  function detailTeamCardHtml(tournamentId, tm) {
+    var owned = ownsTeam(tournamentId, tm.id);
+    var playerRows = tm.players.map(function (p) {
+      return (
+        '<div class="tc-player">' +
+          '<span class="tc-player-name">' + p.name + '</span>' +
+          '<span><span class="tc-score-label">Playtomic</span>' +
+            '<span class="tc-score">' + p.score.toFixed(1) + '</span></span>' +
+        '</div>'
+      );
+    }).join("");
+
+    return (
+      '<div class="team-card">' +
+        '<div class="tc-head">' +
+          '<div class="tc-team">' + tm.team + '</div>' +
+          tierBadge(tm.tier) +
+        '</div>' +
+        '<div class="tc-players-list">' + playerRows + '</div>' +
+        '<div class="tc-row">' +
+          '<span class="tc-price">' + money(tm.price) + ' <small>card</small></span>' +
+          (owned ? '<span class="tc-owned">In your locker</span>' : '') +
+        '</div>' +
+        '<div class="tc-foot">' +
+          '<button class="btn btn-primary btn-sm" data-action="buy" ' +
+            'data-tournament="' + tournamentId + '" data-team="' + tm.id + '">' +
+            (owned ? 'Buy another card' : 'Buy team card') +
+          '</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  // ---------- Render: tournament detail view ----------
+  var LANDING_SECTIONS = [".hero", ".how", "#tournaments", "#my-cards", "#arena"];
+
+  function openTournament(id) {
+    var t = tournamentById(id);
+    if (!t) return;
+
+    var floorPrice = Math.min.apply(null, t.teams.map(function (x) { return x.price; }));
+    var groups = teamsByTier(t);
+
+    var tierBlocks = groups.map(function (g) {
+      return (
+        '<div class="tier-block">' +
+          '<div class="tier-head">' +
+            tierBadge(g.tier.id) +
+            '<span class="tier-range">' + g.tier.range + '</span>' +
+            '<span class="tier-count">' + g.teams.length + ' teams</span>' +
+          '</div>' +
+          '<div class="card-grid">' +
+            g.teams.map(function (tm) { return detailTeamCardHtml(t.id, tm); }).join("") +
+          '</div>' +
+        '</div>'
+      );
+    }).join("");
+
+    document.getElementById("detailContent").innerHTML =
+      '<div class="detail-head">' +
+        '<div>' +
+          '<span class="featured-tag">' + t.format + '</span>' +
+          '<h2>' + t.name + '</h2>' +
+          '<p class="featured-meta">' + t.location + " &middot; Starts " + formatDate(t.startDate) + '</p>' +
+        '</div>' +
+        '<div class="featured-stats">' +
+          '<div><div class="stat-val">' + compactMoney(t.prizePool) + '</div><div class="stat-label">Prize pool</div></div>' +
+          '<div><div class="stat-val">' + t.teams.length + '</div><div class="stat-label">Team cards</div></div>' +
+          '<div><div class="stat-val">' + money(floorPrice) + '</div><div class="stat-label">Floor price</div></div>' +
+        '</div>' +
+      '</div>' +
+      tierBlocks;
+
+    LANDING_SECTIONS.forEach(function (sel) {
+      var el = document.querySelector(sel);
+      if (el) el.hidden = true;
+    });
+    document.getElementById("tournamentDetail").hidden = false;
+    window.scrollTo(0, 0);
+  }
+
+  function closeDetail() {
+    document.getElementById("tournamentDetail").hidden = true;
+    LANDING_SECTIONS.forEach(function (sel) {
+      var el = document.querySelector(sel);
+      if (el) el.hidden = false;
+    });
+    window.scrollTo(0, 0);
   }
 
   // ---------- Render: my cards ----------
@@ -210,10 +308,11 @@
           '<div class="tc-head">' +
             '<div>' +
               '<div class="tc-team">' + tm.team + '</div>' +
-              '<div class="tc-players">' + t.name + " &middot; " + tm.seed + '</div>' +
+              '<div class="tc-players">' + t.name + '</div>' +
             '</div>' +
-            '<span class="tc-seed">' + money(tm.price) + '</span>' +
+            tierBadge(tm.tier) +
           '</div>' +
+          '<div class="tc-players">' + playersLabel(tm) + '</div>' +
           '<div class="tc-row">' +
             '<span class="muted">Sell back: <strong style="color:var(--text)">' + money(back) + '</strong> ' +
               '(after ' + DATA.sellBackFeePct + '% fee)</span>' +
@@ -239,7 +338,6 @@
       var staked = teamById(m.tournamentId, m.stakedTeamId);
       if (!t || !staked) return "";
 
-      // The player must own a card from the same tournament to challenge.
       var eligible = state.cards.filter(function (c) { return c.tournamentId === m.tournamentId; });
       var canPlay = eligible.length > 0;
 
@@ -263,8 +361,8 @@
         '<div class="arena-match">' +
           '<div class="arena-side">' +
             '<div class="as-label">' + t.name + ' &middot; staked by @' + m.opponent + '</div>' +
-            '<div class="as-team">' + staked.team + '</div>' +
-            '<div class="as-players">' + staked.seed + " &middot; " + staked.players + '</div>' +
+            '<div class="as-team">' + staked.team + ' ' + tierBadge(staked.tier) + '</div>' +
+            '<div class="as-players">' + playersLabel(staked) + '</div>' +
           '</div>' +
           '<span class="arena-vs">VS</span>' +
           '<div class="arena-side" style="text-align:right">' +
@@ -274,7 +372,7 @@
             '</div>' +
           '</div>' +
           '<div class="arena-pot">' +
-            '<div class="ap-val">' + money(m.stakedValue) + '</div>' +
+            '<div class="ap-val">' + money(staked.price) + '</div>' +
             '<div class="ap-label">Card at stake</div>' +
           '</div>' +
         '</div>'
@@ -303,7 +401,7 @@
     state.balance -= tm.price;
     state.cards.push({ uid: uid(), tournamentId: tournamentId, teamId: teamId });
     toast("Bought " + tm.team + " card for " + money(tm.price) + ".");
-    renderAll();
+    refresh();
   }
 
   function sellCard(cardUid) {
@@ -315,7 +413,7 @@
     state.cards.splice(idx, 1);
     state.balance += back;
     toast("Sold " + tm.team + " back for " + money(back) + " (5% fee applied).");
-    renderAll();
+    refresh();
   }
 
   function challenge(matchId, cardUid) {
@@ -329,16 +427,12 @@
 
     // Win probability is weighted by relative card value — pricier teams are
     // favoured, mirroring real seeding, but upsets are always possible.
-    var myWeight = myTeam.price;
-    var theirWeight = match.stakedValue;
-    var winChance = myWeight / (myWeight + theirWeight);
+    var winChance = myTeam.price / (myTeam.price + theirTeam.price);
     var won = Math.random() < winChance;
 
-    // Remove the open challenge either way — it has now been played.
     state.arena = state.arena.filter(function (m) { return m.id !== matchId; });
 
     if (won) {
-      // Winner keeps their card and takes the opponent's staked card.
       state.cards.push({
         uid: uid(),
         tournamentId: match.tournamentId,
@@ -346,12 +440,20 @@
       });
       toast("You won! " + theirTeam.team + " card moved to your locker.");
     } else {
-      // Loser forfeits the staked card to the opponent.
       state.cards.splice(cardIdx, 1);
       toast("You lost the swap — " + myTeam.team + " card went to @" + match.opponent + ".");
     }
-    renderAll();
+    refresh();
   }
+
+  // Re-render everything, keeping the detail view in sync if it is open.
+  function refresh() {
+    renderAll();
+    var detail = document.getElementById("tournamentDetail");
+    if (!detail.hidden && currentDetailId) openTournament(currentDetailId);
+  }
+
+  var currentDetailId = null;
 
   // ---------- Add Funds modal ----------
   var modal = document.getElementById("fundsModal");
@@ -376,23 +478,25 @@
     state.balance += amount;
     closeFundsModal();
     toast("Added " + money(amount) + " via " + source + ".");
-    renderAll();
+    refresh();
   }
 
   // ---------- Event wiring ----------
   document.getElementById("addFundsBtn").addEventListener("click", openFundsModal);
   document.getElementById("confirmFunds").addEventListener("click", depositFunds);
+  document.getElementById("backToList").addEventListener("click", function () {
+    currentDetailId = null;
+    closeDetail();
+  });
 
   modal.addEventListener("click", function (e) {
     if (e.target === modal || e.target.closest("[data-close]")) closeFundsModal();
   });
 
-  // Escape key also closes the modal.
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && !modal.hidden) closeFundsModal();
   });
 
-  // Modal tab switching
   document.querySelectorAll(".tab").forEach(function (tab) {
     tab.addEventListener("click", function () {
       document.querySelectorAll(".tab").forEach(function (t) { t.classList.remove("active"); });
@@ -404,7 +508,7 @@
     });
   });
 
-  // Delegated clicks for buy / sell / challenge
+  // Delegated clicks for buy / sell / challenge / open-tournament
   document.addEventListener("click", function (e) {
     var btn = e.target.closest("[data-action]");
     if (!btn) return;
@@ -418,6 +522,9 @@
       var matchId = btn.dataset.match;
       var select = document.querySelector('.arena-select[data-match="' + matchId + '"]');
       if (select) challenge(matchId, select.value);
+    } else if (action === "open-tournament") {
+      currentDetailId = btn.dataset.tournament;
+      openTournament(currentDetailId);
     }
   });
 

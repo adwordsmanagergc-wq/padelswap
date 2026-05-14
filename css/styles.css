@@ -15,6 +15,9 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* The hidden attribute must always win, even over display:grid/flex rules. */
+[hidden] { display: none !important; }
+
 body {
   font-family: "Segoe UI", Roboto, -apple-system, system-ui, sans-serif;
   background: var(--bg);
@@ -309,6 +312,97 @@ h1, h2, h3 { line-height: 1.2; }
   font-size: 12px;
   color: var(--text-dim);
 }
+
+/* ---------- Tiers ---------- */
+.tier-badge {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.tier-platinum  { background: rgba(220, 240, 255, 0.14); color: #dbeeff; border-color: rgba(220, 240, 255, 0.35); }
+.tier-high-gold { background: rgba(255, 206, 77, 0.16); color: #ffd968; border-color: rgba(255, 206, 77, 0.45); }
+.tier-gold      { background: rgba(214, 168, 65, 0.16); color: #e0b85a; border-color: rgba(214, 168, 65, 0.4); }
+.tier-silver    { background: rgba(190, 198, 206, 0.14); color: #c4ccd4; border-color: rgba(190, 198, 206, 0.32); }
+.tier-bronze    { background: rgba(196, 122, 74, 0.16); color: #d28a5c; border-color: rgba(196, 122, 74, 0.4); }
+
+.tier-summary { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 4px; }
+.tier-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 9px;
+}
+.tier-chip strong { color: var(--text); }
+
+/* ---------- Tournament detail ---------- */
+.detail-head {
+  background:
+    linear-gradient(135deg, rgba(198, 255, 61, 0.08), transparent 60%),
+    var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 26px 28px;
+  margin: 16px 0 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: center;
+  justify-content: space-between;
+}
+.detail-head h2 { font-size: 30px; letter-spacing: -0.5px; }
+.tier-block { margin-top: 28px; }
+.tier-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.tier-range { font-size: 13px; color: var(--text-dim); }
+.tier-count { margin-left: auto; font-size: 13px; color: var(--text-dim); }
+
+.tc-players-list { display: grid; gap: 6px; }
+.tc-player {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+.tc-player-name { color: var(--text); }
+.tc-score {
+  font-weight: 800;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.tc-score-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px; }
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+}
+.link-btn:hover { text-decoration: underline; }
+.clickable { cursor: pointer; }
 
 /* ---------- Modal ---------- */
 .modal-backdrop {
