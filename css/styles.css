@@ -320,6 +320,10 @@ h1, h2, h3 { line-height: 1.2; }
   z-index: 100;
   padding: 20px;
 }
+/* The [hidden] attribute must win over the display rule above, otherwise
+   the modal stays visible permanently and cannot be closed. */
+.modal-backdrop[hidden],
+.toast[hidden] { display: none; }
 .modal {
   background: var(--bg-card);
   border: 1px solid var(--border);
