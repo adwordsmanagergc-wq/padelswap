@@ -142,12 +142,14 @@
       }
     ],
 
-    // Open challenges sitting in the Swap Arena, posted by other players.
-    // Each card is staked by its owner; whoever's team wins on court takes both.
+    // Open challenges sitting in the Swap Arena, posted by other members.
+    // Each member has listed a card at a price THEY set; another member can
+    // match it with a card at the same price and the two teams battle —
+    // winner takes both cards.
     arenaMatches: [
-      { id: "m1", tournamentId: "nox-cup", opponent: "padel_marco", stakedTeamId: "nox-t0-3" },
-      { id: "m2", tournamentId: "nox-cup", opponent: "smashqueen", stakedTeamId: "nox-t1-7" },
-      { id: "m3", tournamentId: "super-padel-finals", opponent: "bandeja_bob", stakedTeamId: "spf-t1-4" }
+      { id: "m1", tournamentId: "nox-cup", opponent: "padel_marco", stakedTeamId: "nox-t0-3", price: 300 },
+      { id: "m2", tournamentId: "nox-cup", opponent: "smashqueen", stakedTeamId: "nox-t1-7", price: 150 },
+      { id: "m3", tournamentId: "super-padel-finals", opponent: "bandeja_bob", stakedTeamId: "spf-t1-4", price: 220 }
     ]
   };
 })();

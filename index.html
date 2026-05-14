@@ -58,8 +58,8 @@
       </div>
       <div class="how-step">
         <span class="how-num">3</span>
-        <h3>Swap in the arena</h3>
-        <p>Challenge a peer's card. The team that wins on court wins the swap.</p>
+        <h3>Set your price &amp; battle</h3>
+        <p>List a card at a price you set. A member matches it at the same price — your teams battle, winner takes both cards.</p>
       </div>
       <div class="how-step">
         <span class="how-num">4</span>
@@ -156,6 +156,26 @@
 
       <button class="btn btn-primary btn-block" id="confirmFunds">Confirm deposit</button>
       <button class="btn btn-ghost btn-block" id="skipFunds" data-close>Skip deposit — just browse</button>
+    </div>
+  </div>
+
+  <!-- List card for battle modal -->
+  <div class="modal-backdrop" id="listModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="listTitle">
+      <button class="modal-close" data-close>&times;</button>
+      <h2 id="listTitle">List card for battle</h2>
+      <p class="muted" id="listCardName"></p>
+      <div class="tab-panel" style="margin-top:14px">
+        <label>Your price (USD)
+          <input type="number" id="listPrice" min="1" step="5" />
+        </label>
+        <p class="muted">
+          Another member matches your card with one of theirs at this same price.
+          Your two teams battle &mdash; the winner takes both cards.
+        </p>
+      </div>
+      <button class="btn btn-primary btn-block" id="confirmListing">List in the arena</button>
+      <button class="btn btn-ghost btn-block" data-close>Cancel</button>
     </div>
   </div>
 

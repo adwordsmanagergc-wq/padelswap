@@ -16,7 +16,9 @@
       balance: 0,
       // owned cards: [{ uid, tournamentId, teamId }]
       cards: [],
-      // arena matches still open (clone of seed data, mutated as they resolve)
+      // your cards listed for battle at a price you set: [{ id, cardUid, price }]
+      listings: [],
+      // open challenges posted by other members (clone of seed data)
       arena: DATA.arenaMatches.map(function (m) { return Object.assign({}, m); })
     };
   }
@@ -27,6 +29,7 @@
       if (!raw) return defaultState();
       var parsed = JSON.parse(raw);
       if (!parsed.arena) parsed.arena = defaultState().arena;
+      if (!parsed.listings) parsed.listings = [];
       return parsed;
     } catch (e) {
       return defaultState();
@@ -324,6 +327,10 @@
   }
 
   // ---------- Render: my cards ----------
+  function listingForCard(cardUid) {
+    return state.listings.find(function (l) { return l.cardUid === cardUid; });
+  }
+
   function renderMyCards() {
     var host = document.getElementById("myCards");
     if (!state.cards.length) {
@@ -336,6 +343,27 @@
       var t = tournamentById(c.tournamentId);
       if (!tm || !t) return "";
       var back = sellBackValue(tm.price);
+      var listing = listingForCard(c.uid);
+
+      var footer;
+      if (listing) {
+        footer =
+          '<div class="tc-row"><span class="tc-owned">In the arena at ' + money(listing.price) + '</span></div>' +
+          '<div class="tc-foot">' +
+            '<button class="btn btn-danger btn-sm" data-action="unlist" data-listing="' + listing.id + '">Cancel listing</button>' +
+          '</div>';
+      } else {
+        footer =
+          '<div class="tc-row">' +
+            '<span class="muted">Sell back: <strong style="color:var(--text)">' + money(back) + '</strong> ' +
+              '(after ' + DATA.sellBackFeePct + '% fee)</span>' +
+          '</div>' +
+          '<div class="tc-foot">' +
+            '<button class="btn btn-primary btn-sm" data-action="open-list" data-uid="' + c.uid + '">List for battle</button>' +
+            '<button class="btn btn-ghost btn-sm" data-action="sell" data-uid="' + c.uid + '">Sell back</button>' +
+          '</div>';
+      }
+
       return (
         '<div class="team-card">' +
           '<div class="tc-head">' +
@@ -346,71 +374,107 @@
             tierBadge(tm.tier) +
           '</div>' +
           '<div class="tc-players">' + playersLabel(tm) + '</div>' +
-          '<div class="tc-row">' +
-            '<span class="muted">Sell back: <strong style="color:var(--text)">' + money(back) + '</strong> ' +
-              '(after ' + DATA.sellBackFeePct + '% fee)</span>' +
-          '</div>' +
-          '<div class="tc-foot">' +
-            '<button class="btn btn-ghost btn-sm" data-action="sell" data-uid="' + c.uid + '">Sell back</button>' +
-          '</div>' +
+          footer +
         '</div>'
       );
     }).join("");
   }
 
   // ---------- Render: arena ----------
-  function renderArena() {
-    var host = document.getElementById("arena");
-    if (!state.arena.length) {
-      host.innerHTML = '<div class="empty">No open challenges right now. Check back once more cards are staked.</div>';
-      return;
+  function arenaListingHtml(l) {
+    var card = state.cards.find(function (c) { return c.uid === l.cardUid; });
+    if (!card) return "";
+    var tm = teamById(card.tournamentId, card.teamId);
+    var t = tournamentById(card.tournamentId);
+    if (!tm || !t) return "";
+
+    return (
+      '<div class="arena-match">' +
+        '<div class="arena-side">' +
+          '<div class="as-label">' + t.name + ' &middot; listed by you</div>' +
+          '<div class="as-team">' + tm.team + ' ' + tierBadge(tm.tier) + '</div>' +
+          '<div class="as-players">' + playersLabel(tm) + '</div>' +
+        '</div>' +
+        '<span class="arena-vs">VS</span>' +
+        '<div class="arena-side" style="text-align:right">' +
+          '<div class="as-label">Opponent</div>' +
+          '<div class="as-team" style="color:var(--text-dim)">Waiting for a match&hellip;</div>' +
+          '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px">' +
+            '<button class="btn btn-primary btn-sm" data-action="find-opponent" data-listing="' + l.id + '">Find an opponent</button>' +
+            '<button class="btn btn-danger btn-sm" data-action="unlist" data-listing="' + l.id + '">Cancel</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="arena-pot">' +
+          '<div class="ap-val">' + money(l.price) + '</div>' +
+          '<div class="ap-label">Your price</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function arenaChallengeHtml(m) {
+    var t = tournamentById(m.tournamentId);
+    var staked = teamById(m.tournamentId, m.stakedTeamId);
+    if (!t || !staked) return "";
+
+    var eligible = state.cards.filter(function (c) {
+      return c.tournamentId === m.tournamentId && !listingForCard(c.uid);
+    });
+
+    var rightControl;
+    if (eligible.length) {
+      var options = eligible.map(function (c) {
+        var ct = teamById(c.tournamentId, c.teamId);
+        return '<option value="' + c.uid + '">' + ct.team + ' (' + ct.tier + ')</option>';
+      }).join("");
+      rightControl =
+        '<select class="arena-select" data-match="' + m.id + '" ' +
+          'style="background:var(--bg-elev);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:8px;font-family:inherit">' +
+          options +
+        '</select>' +
+        '<button class="btn btn-primary btn-sm" data-action="accept-challenge" data-match="' + m.id + '">Match &amp; battle</button>';
+    } else {
+      rightControl = '<span class="arena-opponent">Buy a ' + t.name + ' card to match this</span>';
     }
 
-    host.innerHTML = state.arena.map(function (m) {
-      var t = tournamentById(m.tournamentId);
-      var staked = teamById(m.tournamentId, m.stakedTeamId);
-      if (!t || !staked) return "";
-
-      var eligible = state.cards.filter(function (c) { return c.tournamentId === m.tournamentId; });
-      var canPlay = eligible.length > 0;
-
-      var rightControl;
-      if (canPlay) {
-        var options = eligible.map(function (c) {
-          var ct = teamById(c.tournamentId, c.teamId);
-          return '<option value="' + c.uid + '">' + ct.team + ' (' + money(ct.price) + ')</option>';
-        }).join("");
-        rightControl =
-          '<select class="arena-select" data-match="' + m.id + '" ' +
-            'style="background:var(--bg-elev);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:8px;font-family:inherit">' +
-            options +
-          '</select>' +
-          '<button class="btn btn-primary btn-sm" data-action="challenge" data-match="' + m.id + '">Stake &amp; play</button>';
-      } else {
-        rightControl = '<span class="arena-opponent">Buy a ' + t.name + ' card to challenge</span>';
-      }
-
-      return (
-        '<div class="arena-match">' +
-          '<div class="arena-side">' +
-            '<div class="as-label">' + t.name + ' &middot; staked by @' + m.opponent + '</div>' +
-            '<div class="as-team">' + staked.team + ' ' + tierBadge(staked.tier) + '</div>' +
-            '<div class="as-players">' + playersLabel(staked) + '</div>' +
+    return (
+      '<div class="arena-match">' +
+        '<div class="arena-side">' +
+          '<div class="as-label">' + t.name + ' &middot; listed by @' + m.opponent + '</div>' +
+          '<div class="as-team">' + staked.team + ' ' + tierBadge(staked.tier) + '</div>' +
+          '<div class="as-players">' + playersLabel(staked) + '</div>' +
+        '</div>' +
+        '<span class="arena-vs">VS</span>' +
+        '<div class="arena-side" style="text-align:right">' +
+          '<div class="as-label">Match at ' + money(m.price) + ' with your card</div>' +
+          '<div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap;margin-top:4px">' +
+            rightControl +
           '</div>' +
-          '<span class="arena-vs">VS</span>' +
-          '<div class="arena-side" style="text-align:right">' +
-            '<div class="as-label">Your stake</div>' +
-            '<div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap;margin-top:4px">' +
-              rightControl +
-            '</div>' +
-          '</div>' +
-          '<div class="arena-pot">' +
-            '<div class="ap-val">' + money(staked.price) + '</div>' +
-            '<div class="ap-label">Card at stake</div>' +
-          '</div>' +
-        '</div>'
-      );
-    }).join("");
+        '</div>' +
+        '<div class="arena-pot">' +
+          '<div class="ap-val">' + money(m.price) + '</div>' +
+          '<div class="ap-label">Their price</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderArena() {
+    var host = document.getElementById("arena");
+    var yourSection =
+      '<h3 class="arena-group-title">Your battle listings</h3>' +
+      (state.listings.length
+        ? state.listings.map(arenaListingHtml).join("")
+        : '<div class="empty">No active listings. Open <strong>My Cards</strong> and use ' +
+          '&ldquo;List for battle&rdquo; to set your own price on a card.</div>');
+
+    var challengeSection =
+      '<h3 class="arena-group-title">Open challenges from members</h3>' +
+      (state.arena.length
+        ? state.arena.map(arenaChallengeHtml).join("")
+        : '<div class="empty">No open challenges right now.</div>');
+
+    host.innerHTML = yourSection + challengeSection;
   }
 
   function renderAll() {
@@ -438,6 +502,10 @@
   }
 
   function sellCard(cardUid) {
+    if (listingForCard(cardUid)) {
+      toast("That card is listed in the arena — cancel the listing first.");
+      return;
+    }
     var idx = state.cards.findIndex(function (c) { return c.uid === cardUid; });
     if (idx === -1) return;
     var c = state.cards[idx];
@@ -449,34 +517,79 @@
     refresh();
   }
 
-  function challenge(matchId, cardUid) {
-    var match = state.arena.find(function (m) { return m.id === matchId; });
-    var cardIdx = state.cards.findIndex(function (c) { return c.uid === cardUid; });
-    if (!match || cardIdx === -1) return;
+  // ---------- Arena: list / unlist your own card ----------
+  function listCard(cardUid, price) {
+    var card = state.cards.find(function (c) { return c.uid === cardUid; });
+    if (!card || listingForCard(cardUid)) return;
+    state.listings.push({ id: "l_" + uid(), cardUid: cardUid, price: price });
+    var tm = teamById(card.tournamentId, card.teamId);
+    toast("Listed " + tm.team + " for battle at " + money(price) + ".");
+    refresh();
+  }
 
+  function unlistCard(listingId) {
+    state.listings = state.listings.filter(function (l) { return l.id !== listingId; });
+    toast("Listing cancelled.");
+    refresh();
+  }
+
+  // ---------- Arena: resolve a team-vs-team battle ----------
+  // The agreed price is the matched stake; the on-court result is weighted
+  // by the two teams' market values, but upsets are always possible.
+  var MEMBER_HANDLES = ["padel_marco", "smashqueen", "bandeja_bob", "viborazo",
+    "net_ninja", "tulum_tom", "ace_anya", "lob_lord"];
+
+  function resolveBattle(myCardUid, oppTournamentId, oppTeamId, oppHandle, price, opts) {
+    var cardIdx = state.cards.findIndex(function (c) { return c.uid === myCardUid; });
+    if (cardIdx === -1) return;
     var myCard = state.cards[cardIdx];
     var myTeam = teamById(myCard.tournamentId, myCard.teamId);
-    var theirTeam = teamById(match.tournamentId, match.stakedTeamId);
+    var oppTeam = teamById(oppTournamentId, oppTeamId);
+    if (!myTeam || !oppTeam) return;
 
-    // Win probability is weighted by relative card value — pricier teams are
-    // favoured, mirroring real seeding, but upsets are always possible.
-    var winChance = myTeam.price / (myTeam.price + theirTeam.price);
-    var won = Math.random() < winChance;
+    var won = Math.random() < myTeam.price / (myTeam.price + oppTeam.price);
 
-    state.arena = state.arena.filter(function (m) { return m.id !== matchId; });
+    // Clear the listing and/or the open challenge that triggered this battle.
+    if (opts.listingId) {
+      state.listings = state.listings.filter(function (l) { return l.id !== opts.listingId; });
+    }
+    if (opts.matchId) {
+      state.arena = state.arena.filter(function (m) { return m.id !== opts.matchId; });
+    }
 
     if (won) {
-      state.cards.push({
-        uid: uid(),
-        tournamentId: match.tournamentId,
-        teamId: match.stakedTeamId
-      });
-      toast("You won! " + theirTeam.team + " card moved to your locker.");
+      state.cards.push({ uid: uid(), tournamentId: oppTournamentId, teamId: oppTeamId });
+      toast("You won the " + money(price) + " battle! " + oppTeam.team +
+        " card moved to your locker.");
     } else {
       state.cards.splice(cardIdx, 1);
-      toast("You lost the swap — " + myTeam.team + " card went to @" + match.opponent + ".");
+      toast("You lost the " + money(price) + " battle — " + myTeam.team +
+        " card went to @" + oppHandle + ".");
     }
     refresh();
+  }
+
+  // A member matches one of your listings with a card at the same price.
+  function findOpponent(listingId) {
+    var listing = state.listings.find(function (l) { return l.id === listingId; });
+    if (!listing) return;
+    var card = state.cards.find(function (c) { return c.uid === listing.cardUid; });
+    if (!card) return;
+
+    var t = tournamentById(card.tournamentId);
+    var pool = t.teams.filter(function (tm) { return tm.id !== card.teamId; });
+    var oppTeam = pool[Math.floor(Math.random() * pool.length)];
+    var handle = MEMBER_HANDLES[Math.floor(Math.random() * MEMBER_HANDLES.length)];
+
+    resolveBattle(listing.cardUid, t.id, oppTeam.id, handle, listing.price, { listingId: listingId });
+  }
+
+  // You match a member's open challenge with one of your cards.
+  function acceptChallenge(matchId, cardUid) {
+    var match = state.arena.find(function (m) { return m.id === matchId; });
+    if (!match) return;
+    resolveBattle(cardUid, match.tournamentId, match.stakedTeamId, match.opponent,
+      match.price, { matchId: matchId });
   }
 
   // Re-render everything, keeping the detail view in sync if it is open.
@@ -514,20 +627,53 @@
     refresh();
   }
 
+  // ---------- List-for-battle modal ----------
+  var listModal = document.getElementById("listModal");
+  var pendingListCardUid = null;
+
+  function openListModal(cardUid) {
+    var card = state.cards.find(function (c) { return c.uid === cardUid; });
+    if (!card) return;
+    var tm = teamById(card.tournamentId, card.teamId);
+    pendingListCardUid = cardUid;
+    document.getElementById("listCardName").textContent =
+      tm.team + " — " + tm.tier + " (market value " + money(tm.price) + ")";
+    document.getElementById("listPrice").value = tm.price;
+    listModal.hidden = false;
+  }
+
+  function closeListModal() { listModal.hidden = true; pendingListCardUid = null; }
+
+  function confirmListing() {
+    var price = parseFloat(document.getElementById("listPrice").value);
+    if (!price || price <= 0) {
+      toast("Enter a valid price.");
+      return;
+    }
+    var cardUid = pendingListCardUid;
+    closeListModal();
+    listCard(cardUid, Math.round(price));
+  }
+
   // ---------- Event wiring ----------
   document.getElementById("addFundsBtn").addEventListener("click", openFundsModal);
   document.getElementById("confirmFunds").addEventListener("click", depositFunds);
+  document.getElementById("confirmListing").addEventListener("click", confirmListing);
   document.getElementById("backToList").addEventListener("click", function () {
     currentDetailId = null;
     closeDetail();
   });
 
-  modal.addEventListener("click", function (e) {
-    if (e.target === modal || e.target.closest("[data-close]")) closeFundsModal();
+  // Close handling shared by every modal (backdrop click + [data-close]).
+  document.querySelectorAll(".modal-backdrop").forEach(function (m) {
+    m.addEventListener("click", function (e) {
+      if (e.target === m || e.target.closest("[data-close]")) m.hidden = true;
+    });
   });
 
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && !modal.hidden) closeFundsModal();
+    if (e.key !== "Escape") return;
+    document.querySelectorAll(".modal-backdrop").forEach(function (m) { m.hidden = true; });
   });
 
   document.querySelectorAll(".tab").forEach(function (tab) {
@@ -541,7 +687,7 @@
     });
   });
 
-  // Delegated clicks for buy / sell / challenge / open-tournament
+  // Delegated clicks for all data-action controls.
   document.addEventListener("click", function (e) {
     var btn = e.target.closest("[data-action]");
     if (!btn) return;
@@ -551,10 +697,16 @@
       buyCard(btn.dataset.tournament, btn.dataset.team);
     } else if (action === "sell") {
       sellCard(btn.dataset.uid);
-    } else if (action === "challenge") {
+    } else if (action === "open-list") {
+      openListModal(btn.dataset.uid);
+    } else if (action === "unlist") {
+      unlistCard(btn.dataset.listing);
+    } else if (action === "find-opponent") {
+      findOpponent(btn.dataset.listing);
+    } else if (action === "accept-challenge") {
       var matchId = btn.dataset.match;
       var select = document.querySelector('.arena-select[data-match="' + matchId + '"]');
-      if (select) challenge(matchId, select.value);
+      if (select) acceptChallenge(matchId, select.value);
     } else if (action === "open-tournament") {
       currentDetailId = btn.dataset.tournament;
       openTournament(currentDetailId);

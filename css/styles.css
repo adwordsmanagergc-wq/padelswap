@@ -283,6 +283,12 @@ h1, h2, h3 { line-height: 1.2; }
 
 /* ---------- Arena ---------- */
 .arena { display: grid; gap: 14px; }
+.arena-group-title {
+  font-size: 15px;
+  letter-spacing: -0.2px;
+  margin-top: 8px;
+}
+.arena-group-title:first-child { margin-top: 0; }
 .arena-match {
   background: var(--bg-card);
   border: 1px solid var(--border);
