@@ -233,6 +233,50 @@
     );
   }
 
+  // ---------- Render: knockout bracket for one colour group ----------
+  // Teams are paired in seed order; later rounds are TBD until the
+  // tournament is played. Each colour group resolves to one champion.
+  function bracketHtml(teams) {
+    var rounds = [];
+    var first = [];
+    for (var i = 0; i < teams.length; i += 2) {
+      first.push([teams[i], teams[i + 1]]);
+    }
+    rounds.push(first);
+
+    var matchCount = first.length;
+    while (matchCount > 1) {
+      matchCount = matchCount / 2;
+      var blanks = [];
+      for (var j = 0; j < matchCount; j++) blanks.push([null, null]);
+      rounds.push(blanks);
+    }
+
+    function slot(tm) {
+      if (!tm) return '<div class="bk-team bk-tbd">TBD</div>';
+      return '<div class="bk-team">' + tm.team + '</div>';
+    }
+
+    var cols = rounds.map(function (matches) {
+      var teamsInRound = matches.length * 2;
+      var label = teamsInRound === 2 ? "Final"
+        : teamsInRound === 4 ? "Semi-finals"
+        : "Round of " + teamsInRound;
+      var matchHtml = matches.map(function (m) {
+        return '<div class="bk-match">' + slot(m[0]) + slot(m[1]) + '</div>';
+      }).join("");
+      return '<div class="bk-col"><div class="bk-round">' + label + '</div>' + matchHtml + '</div>';
+    });
+
+    cols.push(
+      '<div class="bk-col"><div class="bk-round">Champion</div>' +
+        '<div class="bk-match bk-champ"><div class="bk-team bk-tbd">TBD</div></div>' +
+      '</div>'
+    );
+
+    return '<div class="bracket">' + cols.join("") + '</div>';
+  }
+
   // ---------- Render: tournament detail view ----------
   var LANDING_SECTIONS = [".hero", ".how", "#tournaments", "#my-cards", "#arena"];
 
@@ -251,6 +295,9 @@
             '<span class="tier-range">' + g.tier.range + '</span>' +
             '<span class="tier-count">' + g.teams.length + ' teams</span>' +
           '</div>' +
+          '<p class="bracket-caption">Team vs team knockout &mdash; winners advance to one ' +
+            g.tier.id + ' champion.</p>' +
+          bracketHtml(g.teams) +
           '<div class="card-grid">' +
             g.teams.map(function (tm) { return detailTeamCardHtml(t.id, tm); }).join("") +
           '</div>' +

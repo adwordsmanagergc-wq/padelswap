@@ -372,6 +372,45 @@ h1, h2, h3 { line-height: 1.2; }
 .tier-range { font-size: 13px; color: var(--text-dim); }
 .tier-count { margin-left: auto; font-size: 13px; color: var(--text-dim); }
 
+/* ---------- Knockout bracket ---------- */
+.bracket-caption { font-size: 13px; color: var(--text-dim); margin-bottom: 14px; }
+.bracket {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  margin-bottom: 22px;
+}
+.bk-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  gap: 10px;
+  min-width: 150px;
+}
+.bk-round {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-dim);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.bk-match {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.bk-champ { border-color: var(--accent); }
+.bk-team {
+  padding: 8px 11px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.bk-team + .bk-team { border-top: 1px solid var(--border); }
+.bk-tbd { color: var(--text-dim); font-weight: 500; }
+
 .tc-players-list { display: grid; gap: 6px; }
 .tc-player {
   display: flex;
