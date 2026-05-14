@@ -158,8 +158,14 @@
     var others = DATA.tournaments.filter(function (t) { return t.id !== DATA.featuredTournamentId; });
 
     host.innerHTML = others.map(function (t) {
+      var groups = teamsByTier(t);
+      var tierChips = groups.map(function (g) {
+        return '<span class="tier-chip">' + tierBadge(g.tier.id) +
+          '<strong>' + g.teams.length + '</strong> teams</span>';
+      }).join("");
+
       return (
-        '<div class="event">' +
+        '<div class="event clickable" data-action="open-tournament" data-tournament="' + t.id + '">' +
           '<div class="event-top">' +
             '<div>' +
               '<h3>' + t.name + '</h3>' +
@@ -167,9 +173,8 @@
             '</div>' +
             '<span class="event-badge">' + compactMoney(t.prizePool) + ' pool</span>' +
           '</div>' +
-          '<div class="event-cards">' +
-            t.teams.map(function (tm) { return teamRowHtml(t.id, tm); }).join("") +
-          '</div>' +
+          '<p class="event-meta" style="margin-top:8px">' + t.format + '</p>' +
+          '<div class="tier-summary">' + tierChips + '</div>' +
           '<button class="link-btn" style="margin-top:14px" ' +
             'data-action="open-tournament" data-tournament="' + t.id + '">' +
             'View full tournament &rarr;' +
@@ -177,26 +182,6 @@
         '</div>'
       );
     }).join("");
-  }
-
-  // ---------- Render: a compact team row (event list) ----------
-  function teamRowHtml(tournamentId, tm) {
-    var owned = ownsTeam(tournamentId, tm.id);
-    return (
-      '<div class="card-row">' +
-        '<div>' +
-          '<div class="cr-team">' + tm.team + " " + tierBadge(tm.tier) + '</div>' +
-          '<div class="cr-players">' + playersLabel(tm) + '</div>' +
-        '</div>' +
-        '<div class="cr-right">' +
-          '<span class="cr-price">' + money(tm.price) + '</span>' +
-          '<button class="btn btn-ghost btn-sm" data-action="buy" ' +
-            'data-tournament="' + tournamentId + '" data-team="' + tm.id + '">' +
-            (owned ? 'Buy another' : 'Buy') +
-          '</button>' +
-        '</div>' +
-      '</div>'
-    );
   }
 
   // ---------- Render: detailed buyable team card ----------
@@ -261,6 +246,7 @@
       var teamsInRound = matches.length * 2;
       var label = teamsInRound === 2 ? "Final"
         : teamsInRound === 4 ? "Semi-finals"
+        : teamsInRound === 8 ? "Quarter-finals"
         : "Round of " + teamsInRound;
       var matchHtml = matches.map(function (m) {
         return '<div class="bk-match">' + slot(m[0]) + slot(m[1]) + '</div>';
