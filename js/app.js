@@ -384,7 +384,12 @@
   document.getElementById("confirmFunds").addEventListener("click", depositFunds);
 
   modal.addEventListener("click", function (e) {
-    if (e.target === modal || e.target.hasAttribute("data-close")) closeFundsModal();
+    if (e.target === modal || e.target.closest("[data-close]")) closeFundsModal();
+  });
+
+  // Escape key also closes the modal.
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !modal.hidden) closeFundsModal();
   });
 
   // Modal tab switching

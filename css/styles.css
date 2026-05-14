@@ -84,6 +84,7 @@ h1, h2, h3 { line-height: 1.2; }
 .btn-danger:hover { background: rgba(255, 93, 93, 0.12); }
 .btn-lg { padding: 13px 24px; font-size: 15px; }
 .btn-block { width: 100%; margin-top: 18px; }
+#skipFunds { margin-top: 8px; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn-sm { padding: 6px 12px; font-size: 13px; }
 
