@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PadelSwap — Trade Padel Tournament Team Cards</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#">
+        <span class="brand-mark">P</span>
+        <span class="brand-name">Padel<strong>Swap</strong></span>
+      </a>
+      <nav class="nav">
+        <a href="#tournaments">Tournaments</a>
+        <a href="#my-cards">My Cards</a>
+        <a href="#arena">Swap Arena</a>
+      </nav>
+      <div class="wallet">
+        <div class="wallet-balance">
+          <span class="wallet-label">Balance</span>
+          <span class="wallet-amount" id="walletBalance">$0.00</span>
+        </div>
+        <button class="btn btn-primary" id="addFundsBtn">Add Funds</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-inner">
+        <p class="hero-kicker">Fantasy padel, real stakes</p>
+        <h1>Buy team cards. Swap them in battle. Winner takes all.</h1>
+        <p class="hero-sub">
+          Pick up team cards for upcoming padel tournaments, put them head-to-head
+          against other players' cards, and the winner takes the loser's card.
+          Cash out any time by selling back to PadelSwap — minus a flat 5% fee.
+        </p>
+        <div class="hero-actions">
+          <a href="#tournaments" class="btn btn-primary btn-lg">Browse Tournaments</a>
+          <a href="#how" class="btn btn-ghost btn-lg">How it works</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="how" class="how">
+      <div class="how-step">
+        <span class="how-num">1</span>
+        <h3>Add funds</h3>
+        <p>Top up by bank transfer from any country, or with crypto.</p>
+      </div>
+      <div class="how-step">
+        <span class="how-num">2</span>
+        <h3>Buy team cards</h3>
+        <p>Choose teams competing in an upcoming tournament and buy their cards.</p>
+      </div>
+      <div class="how-step">
+        <span class="how-num">3</span>
+        <h3>Swap in the arena</h3>
+        <p>Challenge a peer's card. The team that wins on court wins the swap.</p>
+      </div>
+      <div class="how-step">
+        <span class="how-num">4</span>
+        <h3>Sell back anytime</h3>
+        <p>Sell cards back to PadelSwap at market value, minus a 5% fee.</p>
+      </div>
+    </section>
+
+    <section id="tournaments" class="section">
+      <div class="section-head">
+        <h2>Next tournament</h2>
+        <p class="section-sub">The headline event open for card trading right now.</p>
+      </div>
+      <div id="featuredTournament" class="featured"></div>
+
+      <div class="section-head section-head-tight">
+        <h2>More padel events</h2>
+        <p class="section-sub">Other tournaments you can collect and swap cards for.</p>
+      </div>
+      <div id="otherTournaments" class="event-grid"></div>
+    </section>
+
+    <section id="my-cards" class="section">
+      <div class="section-head">
+        <h2>My Cards</h2>
+        <p class="section-sub">Cards in your locker. Sell back or send them into the arena.</p>
+      </div>
+      <div id="myCards" class="card-grid"></div>
+    </section>
+
+    <section id="arena" class="section">
+      <div class="section-head">
+        <h2>Swap Arena</h2>
+        <p class="section-sub">
+          Stake a card against a peer's card. Winner takes both — loser's card
+          moves to the winner's locker.
+        </p>
+      </div>
+      <div id="arena" class="arena"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>PadelSwap — demo prototype. No real money is processed. Balances are stored locally in your browser.</p>
+  </footer>
+
+  <!-- Add Funds modal -->
+  <div class="modal-backdrop" id="fundsModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="fundsTitle">
+      <button class="modal-close" data-close>&times;</button>
+      <h2 id="fundsTitle">Add funds</h2>
+      <div class="tabs">
+        <button class="tab active" data-method="bank">Bank transfer</button>
+        <button class="tab" data-method="crypto">Crypto</button>
+      </div>
+
+      <div class="tab-panel" data-panel="bank">
+        <p class="muted">Send a bank transfer from any country. Funds clear instantly in this demo.</p>
+        <label>Country
+          <select id="bankCountry">
+            <option>United Kingdom</option>
+            <option>Spain</option>
+            <option>United States</option>
+            <option>United Arab Emirates</option>
+            <option>Sweden</option>
+            <option>Mexico</option>
+            <option>Other</option>
+          </select>
+        </label>
+        <label>Amount (USD)
+          <input type="number" id="bankAmount" min="10" step="10" value="250" />
+        </label>
+      </div>
+
+      <div class="tab-panel" data-panel="crypto" hidden>
+        <p class="muted">Deposit with crypto. The equivalent USD value is credited to your wallet.</p>
+        <label>Asset
+          <select id="cryptoAsset">
+            <option>USDC</option>
+            <option>USDT</option>
+            <option>BTC</option>
+            <option>ETH</option>
+          </select>
+        </label>
+        <label>Amount (USD equivalent)
+          <input type="number" id="cryptoAmount" min="10" step="10" value="250" />
+        </label>
+      </div>
+
+      <button class="btn btn-primary btn-block" id="confirmFunds">Confirm deposit</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
